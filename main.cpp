@@ -5,7 +5,7 @@
 #include <random>
 
 
-/*windows compile: g++ main.cpp -o a -static -L./pdcurses -lpdcurses -luser32 -lgdi32*/
+/* Windows Compile: g++ main.cpp -o Snake -static -lpdcurses */
 
 int score = 0;
 int hi_score = 0;
