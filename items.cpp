@@ -5,10 +5,8 @@
 Loc food_loc;
 std::string food = "-";
 extern Loc prevLoc[200];
-extern int parts;
-extern int score;
-extern int speed;
-extern int cycles;
+extern gameValues settings;
+
 
 
 int items::randNum(int end) {
@@ -29,15 +27,15 @@ void items::foodGraphics() {
 
 
 void items::foodPickup() {
-    (score == 0) ? food_loc = {5, 5} : Loc{};
-    for (int i = 0; i < parts; i++){
+    (settings.score == 0) ? food_loc = {5, 5} : Loc{};
+    for (int i = 0; i < settings.parts; i++){
     if ((prevLoc[i].x == food_loc.x && prevLoc[i].y == food_loc.y) || (prevLoc[i].x == food_loc.x -1 && prevLoc[i].y == food_loc.y)) {
     food_loc.x = randNum(48);
     food_loc.y = randNum(18);
-    score++;
-    parts = parts + 3;
-    speed = speed - 1000;
-    cycles++;
+    settings.score++;
+    settings.parts +=5;
+    settings.speed = settings.speed - 1000;
+    settings.cycles++;
     }
   }
 }

@@ -1,0 +1,408 @@
+main.cpp  
+
+#include <curses.h>
+#include <ncurses.h>
+#include <iostream>
+#include <unistd.h>
+#include "player.h"
+#include "items.h"
+#include "maingame.h"
+#include "location.h"
+
+std::string title = "SNAAAAAAAKE!?";
+gameValues settings;
+
+void colorTheme(WINDOW *win) {  
+  wbkgd(win, COLOR_PAIR(129 + settings.cycles));
+}
+
+void speedCtrl() {
+
+  usleep(settings.speed);
+}
+
+void mMenu(WINDOW *win) {
+
+    wattron(win, A_BOLD);
+    mvwprintw(win, 9, 21, "1> PLAY");
+    mvwprintw(win, 10, 21, "2> EXIT");
+    mvwprintw(win, 7, 19, "%s", title.c_str());
+    wattroff(win, A_BOLD);
+    mvwprintw(win, 18, 2, "Created by Jav");
+    mvwprintw(win, 18, 23, "https://github.com/xabdev");
+    box(win, 0, 0);
+    wrefresh(win);
+    werase(win);
+    int mmenu = getch();
+  
+    switch (mmenu) {
+      case 49:
+        werase(win);
+        settings.menu = false;
+        settings.play = true;
+        clear();
+        werase(win);
+        break;
+
+      case 50:
+        settings.menu = false;
+        settings.play = false;
+        werase(win);
+        break;
+    }
+}
+
+void statScreen() {
+
+      attron(A_BOLD);
+      mvprintw(1, 24, "SCORE: %d", settings.score);
+      mvprintw(2, 22, "HI-SCORE: %d", settings.hi_score);
+      //mvprintw(1, 2, "LENGTH: %d", parts);
+      mvprintw(2, 2, "DELAY: %d", settings.speed );
+      //mvprintw(1, 43, "X POS: %d", mc_loc.x );
+      //mvprintw(2, 43, "Y POS: %d", mc_loc.y );
+      attroff(A_BOLD);
+}
+
+int main() {
+
+  player Player1;
+  items Items;
+  maingame mainGame;
+
+  // Initialize ncurses screen
+  mainGame.initNcurses();
+
+  WINDOW * win = newwin(20, 50, 3, 2);
+    
+  //Menu loop
+  while (settings.menu) {
+
+    //setDefault();
+    wbkgd(win, COLOR_PAIR(3));  
+    mMenu(win);
+    usleep(50000);
+    wrefresh(win);
+    werase(win);
+  
+    // Main game loop
+    while (settings.play)  {
+
+      speedCtrl(); 
+      Player1.pSnake(win);
+      Items.foodMain(win);
+      box(win, 0, 0);
+      wrefresh(win);
+      refresh();
+      werase(win);
+      colorTheme(win);
+      statScreen();
+      }
+   }
+
+  endwin();
+  return 0;
+} maingame.h #pragma once
+
+class maingame {
+
+    public:
+        void initColor();
+        void initNcurses();
+        
+
+};
+
+
+maingame.cpp 
+
+#include "maingame.h"
+#include <ncurses.h>
+
+void maingame::initColor() {
+
+  init_pair(1, 82, COLOR_BLACK);
+  init_pair(2, 214, COLOR_BLACK);
+  init_pair(3, 205, 233);
+  
+  for (int i = 129; i < 247; i++) {init_pair(i, i, 233);}
+
+}
+
+void maingame::initNcurses() {
+
+  initscr();
+  start_color();
+  noecho();
+  cbreak();
+  keypad(stdscr, true);
+  curs_set(0);
+  nodelay(stdscr, TRUE);
+  initColor();
+}
+
+
+items.h 
+
+#pragma once
+#include <random>
+#include "location.h"
+#include <ncurses.h>
+
+
+class items {
+
+    public:
+        int randNum(int end);
+        void foodGraphics();
+        void foodMain(WINDOW *win);
+        void foodPickup();
+};
+
+
+items.cpp 
+
+#include "items.h"
+#include "location.h"
+
+Loc food_loc;
+std::string food = "-";
+extern Loc prevLoc[200];
+extern gameValues settings;
+
+int items::randNum(int end) {
+  std::random_device rd;
+  std::mt19937 engine(rd());
+  std::uniform_int_distribution<int> dist{1, end};
+  int rand = dist(engine);
+  return rand;
+}
+
+
+void items::foodGraphics() {
+  if (food == "-") { food = "\\"; }
+  else if (food == "\\") { food = "|";}
+  else if (food == "|") { food = "/";} 
+  else if (food == "/") { food = "-";}
+}
+
+
+void items::foodPickup() {
+    (settings.score == 0) ? food_loc = {5, 5} : Loc{};
+    for (int i = 0; i < settings.parts; i++){
+    if ((prevLoc[i].x == food_loc.x && prevLoc[i].y == food_loc.y) || (prevLoc[i].x == food_loc.x -1 && prevLoc[i].y == food_loc.y)) {
+    food_loc.x = randNum(48);
+    food_loc.y = randNum(18);
+    settings.score++;
+    settings.parts +=5;
+    settings.speed = settings.speed - 1000;
+    settings.cycles++;
+    }
+  }
+}
+
+
+void items::foodMain(WINDOW *win) {
+  
+  wattron(win, COLOR_PAIR(2) | A_BOLD);
+  mvwprintw(win, food_loc.y, food_loc.x, "%s", food.c_str());
+  wattroff(win, COLOR_PAIR(2) | A_BOLD);
+  
+  foodPickup();
+  foodGraphics();
+
+}
+
+
+player.h 
+
+#pragma once
+#include <ncurses.h>
+
+class player {
+
+    public:
+        player();
+        ~player();
+
+        void draw_mc_win(WINDOW *win);
+        void checkBorder();
+        void changeDirection();
+        void vJoy();
+        void gameOver(WINDOW *win);
+        void pauseGame();
+        void setDefault();
+        void pSnake(WINDOW *win);
+
+
+};
+
+
+player.cpp 
+
+#include "player.h"
+#include <string>
+#include "location.h"
+
+player::player() {}
+player::~player(){}
+
+std::string mc = "O", mc_shadow = "o";
+
+bool movement[4] = { false, true, false, false };
+int direction;
+
+
+Loc mc_loc = {0, 0};
+Loc prevLoc[200];
+
+extern gameValues settings;
+
+void player::pauseGame() {
+
+  nodelay(stdscr, false);
+  getch();
+  nodelay(stdscr, true);
+}
+
+
+void player::draw_mc_win(WINDOW *win) {
+
+  for (int i = settings.parts; i > 0; i--) {
+  prevLoc[i] = prevLoc[i-1]; 
+  }
+  wattron(win, COLOR_PAIR(1));
+  wattron(win, A_BOLD);
+  mvwprintw(win, mc_loc.y, mc_loc.x, "%s", mc.c_str());
+  wattroff(win, A_BOLD);
+  
+  prevLoc[0] = mc_loc; 
+
+  for (int i = settings.parts; i > 0; i--) {
+    mvwprintw(win, prevLoc[i].y, prevLoc[i].x, "%s", mc_shadow.c_str());
+  }
+  
+  wattroff(win, COLOR_PAIR(1));
+}
+
+void player::checkBorder() {
+
+  if (mc_loc.x >= 48) { mc_loc.x = 1; }
+  else if (mc_loc.x <= 0) { mc_loc.x = 49;}
+  if (mc_loc.y > 18) { mc_loc.y = 0; }
+  else if (mc_loc.y <= 0) { mc_loc.y = 18;}
+}
+
+
+void player::changeDirection() {
+
+    for (int i = 0; i < 4; i++) {
+    movement[i] = (i == direction); }
+}
+
+void player::vJoy() {
+
+
+  int mc_move = getch();
+  
+  switch (mc_move) {
+
+    case KEY_UP:
+      if (movement[2]) { break; }
+      direction = 0;
+      changeDirection();
+      break;
+
+    case KEY_DOWN:
+      if (movement[0]) { break; }
+      direction = 2;
+      changeDirection();
+      break;
+
+    case KEY_RIGHT:
+      if (movement[3]) { break; }
+      direction = 1;
+      changeDirection();
+      break;
+
+    case KEY_LEFT:
+      if (movement[1]) { break; }
+      direction = 3;
+      changeDirection();
+      break;
+  }
+
+  if (movement[0]) {mc_loc.y--;}
+  if (movement[1]) {mc_loc.x+=2;}
+  if (movement[2]) {mc_loc.y++;}
+  if (movement[3]) {mc_loc.x-=2;}
+
+}
+
+void player::setDefault() {
+
+  if (settings.score > settings.hi_score) { settings.hi_score = settings.score;}
+  settings.score = 0;
+  settings.parts = 5;
+  settings.speed = 80000;
+  mc_loc.x = 1;
+  mc_loc.y = 1;
+  for (int i = 0; i != 98; i++) {
+    prevLoc[i].x = 0 , prevLoc[i].y = 0;
+  }
+
+}
+
+
+void player::gameOver(WINDOW *win ) {
+
+  for (int i = settings.parts; i > 0; i--) {
+    if (mc_loc.x == prevLoc[i].x && mc_loc.y == prevLoc[i].y) { 
+      draw_mc_win(win);
+      wattron(win, A_BOLD);
+      mvwprintw(win, 9, 15, "G A M E  O V E R !");
+      wattroff(win, A_BOLD);
+      wrefresh(win);
+      settings.play = false;
+      settings.menu = true;
+      setDefault();
+      pauseGame();
+      
+    }
+  }
+}
+
+void player::pSnake(WINDOW *win) {
+
+  vJoy();
+  draw_mc_win(win);
+  checkBorder();
+  gameOver(win);
+}
+
+
+
+location.h 
+
+#pragma once
+
+struct Loc {
+  int x;
+  int y;
+};
+
+struct gameValues {
+
+  int score = 0;
+  int hi_score = 0;
+  int cycles = 0;
+  int parts = 6;
+
+  int speed = 100000;
+  int color = 197;
+  int mc_color = 70;
+
+  bool menu = true;
+  bool play = false;
+
+};

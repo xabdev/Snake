@@ -4,68 +4,23 @@
 #include <unistd.h>
 #include "player.h"
 #include "items.h"
+#include "maingame.h"
+#include "location.h"
 
 
 /* Windows Compile: g++ main.cpp -o Snake -static -lpdcurses */
 
-int score = 0;
-int hi_score = 0;
-int cycles = 0;
-
-int speed = 100000;
-int color = 197;
-int mc_color = 70;
-
-
-
-bool menu = true;
-bool play = false;
-
-
-
-// Set up initial character position
 
 
 std::string title = "SNAAAAAAAKE!?";
 
+gameValues settings;
 
-void initNc() {
-  initscr();
-  start_color();
 
-  // Define the color pairs for the extended 256 colors
-  //for (int i = 0; i < 247; i++) {init_pair(i, i, COLOR_BLACK);}
-
-  noecho();
-  cbreak();
-  keypad(stdscr, true);
-  curs_set(0);
-  nodelay(stdscr, TRUE);
-}
-
-void initColor() {
-
-  init_pair(1, 82, COLOR_BLACK);
-  init_pair(2, 214, COLOR_BLACK);
-  init_pair(3, 205, 233);
-  
-  for (int i = 129; i < 247; i++) {init_pair(i, i, 233);}
-
-}
 
 void colorTheme(WINDOW *win) {  
-  wbkgd(win, COLOR_PAIR(129 + cycles));
+  wbkgd(win, COLOR_PAIR(129 + settings.cycles));
 }
-
-
-
-
-
-void speedCtrl() {
-
-  usleep(speed);
-}
-
 
 void mMenu(WINDOW *win) {
 
@@ -78,34 +33,35 @@ void mMenu(WINDOW *win) {
     mvwprintw(win, 18, 23, "https://github.com/xabdev");
     box(win, 0, 0);
     wrefresh(win);
-    werase(win);
+
     int mmenu = getch();
   
     switch (mmenu) {
       case 49:
-        werase(win);
-        menu = false;
-        play = true;
+
+        settings.menu = false;
+        settings.play = true;
         clear();
-        werase(win);
+
         break;
 
       case 50:
-        menu = false;
-        play = false;
-        werase(win);
+        settings.menu = false;
+        settings.play = false;
+
         break;
     }
+            werase(win);
 }
 
 
 void statScreen() {
 
       attron(A_BOLD);
-      mvprintw(1, 24, "SCORE: %d", score);
-      mvprintw(2, 22, "HI-SCORE: %d", hi_score);
+      mvprintw(1, 24, "SCORE: %d", settings.score);
+      mvprintw(2, 22, "HI-SCORE: %d", settings.hi_score);
       //mvprintw(1, 2, "LENGTH: %d", parts);
-      mvprintw(2, 2, "DELAY: %d", speed );
+      mvprintw(2, 2, "DELAY: %d", settings.speed );
       //mvprintw(1, 43, "X POS: %d", mc_loc.x );
       //mvprintw(2, 43, "Y POS: %d", mc_loc.y );
       attroff(A_BOLD);
@@ -116,15 +72,15 @@ int main() {
 
   player Player1;
   items Items;
+  maingame mainGame;
 
   // Initialize ncurses screen
-  initNc();
-  initColor();
+  mainGame.initNcurses();
 
   WINDOW * win = newwin(20, 50, 3, 2);
     
   //Menu loop
-  while (menu) {
+  while (settings.menu) {
 
     //setDefault();
     wbkgd(win, COLOR_PAIR(3));  
@@ -134,17 +90,21 @@ int main() {
     werase(win);
   
     // Main game loop
-    while (play)  {
+    while (settings.play)  {
 
-      speedCtrl(); 
-
+      usleep(settings.speed);
+      
+      
       Player1.pSnake(win);
     
       Items.foodMain(win);
+      
       box(win, 0, 0);
+      
       wrefresh(win);
-      refresh();
       werase(win);
+      refresh();
+      
 
       colorTheme(win);
       statScreen();
